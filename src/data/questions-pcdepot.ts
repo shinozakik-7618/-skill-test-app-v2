@@ -674,7 +674,7 @@ export const questionsPCDepot: Question[] = [
     correctAnswer: 1,
     explanation: 'PC Depotのブランドイメージは、「Digital Life Planner」として、顧客のデジタルライフを長期的にサポートする信頼できるパートナーであることです。単なる安売り店ではなく、専門知識とサポート力を持つプロフェッショナル集団としてのブランド価値を高めることが重要です。'
   },
-  },
+  
 
   {
     id: 'PCD051',
