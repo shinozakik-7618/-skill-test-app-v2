@@ -10,7 +10,7 @@ import { strategyQuestions } from './questions-strategy';
 import { processQuestions } from './questions-process';
 import { organizationQuestions } from './questions-organization';
 import { itQuestions } from './questions-it';
-import { generalQuestions } from './questions-general';
+import { questionsGeneral } from './questions-general';
 import { questionsCommunication } from './questions-communication';
 import { questionsPCDepot } from './questions-pcdepot';
 
@@ -24,7 +24,7 @@ export const allQuestions: Question[] = [
   ...processQuestions,        // カテゴリー6: 業務プロセス・効率化 (40問)
   ...organizationQuestions,   // カテゴリー7: 組織マネジメント (40問)
   ...itQuestions,             // カテゴリー8: 情報システム・IT管理 (40問)
-  ...generalQuestions,        // カテゴリー9: 総務・一般管理 (40問)
+  ...questionsGeneral,        // カテゴリー9: 総務・一般管理 (40問)
   ...questionsCommunication,  // カテゴリー10: コミュニケーション・報告 (40問)
   ...questionsPCDepot         // PC Depotカテゴリー (150問)
 ];
