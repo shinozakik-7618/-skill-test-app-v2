@@ -18,6 +18,12 @@ export default function QuestionCreator() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [jsonInput, setJsonInput] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+
+  // カテゴリー名からexport名を生成する関数（日本語を含むすべての非ASCII文字を削除）
+  const getCategoryExportName = (categoryName: string): string => {
+    // 英数字のみを残す（日本語、記号などをすべて削除）
+    return categoryName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
   const [importSuccess, setImportSuccess] = useState<boolean>(false);
 
   // 依頼文を生成
@@ -150,16 +156,17 @@ ${urlList.map((url, index) => `${index + 1}. ${url.trim()}`).join('\n')}
       return;
     }
 
+    const exportName = getCategoryExportName(category);
     const fileContent = `import { Question } from '../types';
 
-export const ${category.toLowerCase().replace(/[・\s]/g, '')}Questions: Question[] = ${JSON.stringify(questions, null, 2)};
+export const ${exportName}Questions: Question[] = ${JSON.stringify(questions, null, 2)};
 `;
 
     const blob = new Blob([fileContent], { type: 'text/typescript' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `questions-${category.toLowerCase().replace(/[・\s]/g, '')}.ts`;
+    a.download = `questions-${getCategoryExportName(category)}.ts`;
     a.click();
     URL.revokeObjectURL(url);
   };
