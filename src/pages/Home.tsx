@@ -14,7 +14,7 @@ const categories: { name: Category; icon: string; questionsCount: number }[] = [
   { name: '情報システム・IT管理', icon: '💻', questionsCount: 40 },
   { name: '総務・一般管理', icon: '📋', questionsCount: 40 },
   { name: 'コミュニケーション・報告', icon: '💬', questionsCount: 40 },
-  { name: 'PCデポ', icon: '🏪', questionsCount: 150 },
+  { name: 'PC Depot', icon: '🏪', questionsCount: 150 },
   { name: 'AI・DXニュース', icon: '🤖', questionsCount: 0 },
 ];
 
@@ -121,7 +121,7 @@ export default function Home() {
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-blue-500 text-white rounded-full text-center mr-3 flex-shrink-0">2</span>
-              <span>10問の4択問題に回答します（PCデポは5問）</span>
+              <span>10問の4択問題に回答します（PC Depotは5問）</span>
             </li>
             <li className="flex items-start">
               <span className="inline-block w-6 h-6 bg-blue-500 text-white rounded-full text-center mr-3 flex-shrink-0">3</span>
