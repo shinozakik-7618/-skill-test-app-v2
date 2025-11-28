@@ -1,0 +1,174 @@
+// 更新情報・お知らせデータ
+import { Announcement } from '../types';
+
+export const announcements: Announcement[] = [
+  // 重要なお知らせ（バグ修正、削除機能など）
+  {
+    id: 'ann-007',
+    type: 'important',
+    title: '日付指定削除機能を追加',
+    content: '管理画面から特定の日付のテスト結果を削除できる機能を追加しました。誤って入力したデータや特定日のデータのみを削除できます。統計情報は自動的に再計算されます。',
+    date: '2025-01-18T15:00:00+09:00',
+    isRead: false
+  },
+  {
+    id: 'ann-005',
+    type: 'important',
+    title: 'システム完成: 全550問が利用可能になりました',
+    content: '一般10カテゴリー(400問)とPC Depotカテゴリー(150問)の合計550問が完成し、すべての問題が利用可能になりました。管理職に必要な幅広い知識を学習できます。',
+    date: '2025-01-15T08:00:00+09:00',
+    isRead: false
+  },
+  
+  // 更新（問題・機能の修正・改善）
+  {
+    id: 'ann-008',
+    type: 'update',
+    title: 'CSVエクスポート機能を改善',
+    content: '管理画面からワンクリックでテスト結果をCSVファイルとしてダウンロードできるようになりました。ファイル名には日付が自動的に付与され、Excelやスプレッドシートで簡単に分析できます。',
+    date: '2025-01-18T14:00:00+09:00',
+    isRead: false
+  },
+  
+  // 追加（新カテゴリ、新機能の追加）
+  {
+    id: 'ann-001',
+    type: 'addition',
+    title: 'PC Depotカテゴリー Day 21-30 (25問) 追加',
+    content: 'IT・DX推進とESG・サステナビリティに関する25問を追加しました。デジタルトランスフォーメーション、クラウド、RPA、5G技術、カーボンニュートラル、ダイバーシティなど最新のテーマを網羅しています。',
+    category: 'PC Depot',
+    date: '2025-01-18T10:00:00+09:00',
+    isRead: false
+  },
+  {
+    id: 'ann-002',
+    type: 'addition',
+    title: 'PC Depotカテゴリー Day 11-20 (25問) 追加',
+    content: '競合戦略・差別化と財務分析・KPIに関する25問を追加しました。大手量販店との差別化戦略、NCS会員継続率の分析、ストック型収益の財務的意義など、経営戦略と財務の視点から学習できます。',
+    category: 'PC Depot',
+    date: '2025-01-15T09:00:00+09:00',
+    isRead: false
+  },
+  {
+    id: 'ann-003',
+    type: 'addition',
+    title: '総務・一般管理カテゴリー (40問) 完成',
+    content: '株主総会運営、登記実務、文書管理、契約管理、BCP策定など、総務部門に必要な21のテーマをカバーする40問が完成しました。',
+    category: '総務・一般管理',
+    date: '2025-01-14T15:00:00+09:00',
+    isRead: false
+  },
+  {
+    id: 'ann-004',
+    type: 'addition',
+    title: '掲示板機能を追加',
+    content: '更新情報やお知らせを確認できる掲示板機能を追加しました。新しい問題の追加や機能追加の情報をリアルタイムで確認できます。',
+    date: '2025-01-15T12:00:00+09:00',
+    isRead: false
+  },
+  {
+    id: 'ann-006',
+    type: 'addition',
+    title: 'CSV出力機能を追加',
+    content: 'テスト結果をCSV形式でエクスポートする機能を追加しました。学習履歴の記録管理にご活用ください。',
+    date: '2025-01-10T10:00:00+09:00',
+    isRead: false
+  }
+];
+
+// お知らせを日付順(新しい順)に取得
+export const getAnnouncements = (): Announcement[] => {
+  return [...announcements].sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+};
+
+// タイプ別にお知らせを取得
+export const getAnnouncementsByType = (type: 'update' | 'addition' | 'important'): Announcement[] => {
+  return getAnnouncements().filter(ann => ann.type === type);
+};
+
+// 今週更新（過去7日間）のお知らせを取得
+export const getThisWeekAnnouncements = (): Announcement[] => {
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return getAnnouncements().filter(ann => new Date(ann.date) >= sevenDaysAgo);
+};
+
+// 未読のお知らせを取得
+export const getUnreadAnnouncements = (): Announcement[] => {
+  const readIds = getReadAnnouncementIds();
+  return announcements.filter(ann => !readIds.includes(ann.id));
+};
+
+// 未読件数を取得
+export const getUnreadCount = (): number => {
+  return getUnreadAnnouncements().length;
+};
+
+// タイプ別の未読件数を取得
+export const getUnreadCountByType = (type: 'update' | 'addition' | 'important'): number => {
+  const readIds = getReadAnnouncementIds();
+  return announcements.filter(ann => ann.type === type && !readIds.includes(ann.id)).length;
+};
+
+// 今週更新の未読件数を取得
+export const getThisWeekUnreadCount = (): number => {
+  const readIds = getReadAnnouncementIds();
+  const thisWeek = getThisWeekAnnouncements();
+  return thisWeek.filter(ann => !readIds.includes(ann.id)).length;
+};
+
+// 既読IDを取得
+export const getReadAnnouncementIds = (): string[] => {
+  const stored = localStorage.getItem('readAnnouncements');
+  return stored ? JSON.parse(stored) : [];
+};
+
+// お知らせを既読にする
+export const markAsRead = (announcementId: string): void => {
+  const readIds = getReadAnnouncementIds();
+  if (!readIds.includes(announcementId)) {
+    readIds.push(announcementId);
+    localStorage.setItem('readAnnouncements', JSON.stringify(readIds));
+  }
+};
+
+// すべてを既読にする
+export const markAllAsRead = (): void => {
+  const allIds = announcements.map(ann => ann.id);
+  localStorage.setItem('readAnnouncements', JSON.stringify(allIds));
+};
+
+// タイプ別のアイコンを取得
+export const getTypeIcon = (type: string): string => {
+  switch (type) {
+    case 'update': return '🔄';
+    case 'addition': return '✨';
+    case 'important': return '⚠️';
+    default: return '📌';
+  }
+};
+
+// タイプ別の表示名を取得
+export const getTypeName = (type: string): string => {
+  switch (type) {
+    case 'update': return '更新';
+    case 'addition': return '追加';
+    case 'important': return '重要';
+    default: return 'お知らせ';
+  }
+};
+
+// 後方互換性のためのエイリアス
+export const getTypeLabel = getTypeName;
+
+// タイプ別の色を取得
+export const getTypeColor = (type: string): string => {
+  switch (type) {
+    case 'update': return 'bg-blue-100 text-blue-800';
+    case 'addition': return 'bg-green-100 text-green-800';
+    case 'important': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
