@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { getTestResults } from '../utils/storage';
 
@@ -25,9 +25,11 @@ export default function CalendarPage() {
     return acc;
   }, {} as Record<string, { total: number; correct: number; results: any[] }>);
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+const monthStart = startOfMonth(currentDate);
+const monthEnd = endOfMonth(currentDate);
+const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const handlePreviousMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
@@ -95,20 +97,20 @@ export default function CalendarPage() {
           </div>
 
           <div className="grid grid-cols-7 gap-2">
-            {daysInMonth.map((day) => {
+            {calendarDays.map((day) => {
               const dateKey = format(day, 'yyyy-MM-dd');
               const dayResults = resultsByDate[dateKey];
               const hasResults = !!dayResults;
               const accuracy = hasResults ? (dayResults.correct / dayResults.total) * 100 : 0;
               const isSelected = selectedDate && isSameDay(day, selectedDate);
-
+      　　　　　const isCurrentMonth = isSameMonth(day, currentDate);
               return (
                 <button
                   key={dateKey}
                   onClick={() => handleDateClick(day)}
                   className={`aspect-square p-2 rounded-lg border-2 transition-all ${
-                    !isSameMonth(day, currentDate)
-                      ? 'opacity-30'
+  !isCurrentMonth
+    ? 'opacity-30 border-gray-100'
                       : isSelected
                       ? 'border-blue-600 bg-blue-50'
                       : hasResults
@@ -119,7 +121,7 @@ export default function CalendarPage() {
                   <div className="text-sm font-semibold text-gray-900">
                     {format(day, 'd')}
                   </div>
-                  {hasResults && (
+                  {hasResults &&is CurrentMonth &&(
                     <div className="text-xs mt-1">
                       <div className="text-green-600 font-semibold">
                         {dayResults.correct}/{dayResults.total}
