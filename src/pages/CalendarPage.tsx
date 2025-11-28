@@ -121,7 +121,7 @@ const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd 
                   <div className="text-sm font-semibold text-gray-900">
                     {format(day, 'd')}
                   </div>
-                  {hasResults &&is CurrentMonth &&(
+                  {hasResults && isCurrentMonth &&(
                     <div className="text-xs mt-1">
                       <div className="text-green-600 font-semibold">
                         {dayResults.correct}/{dayResults.total}
