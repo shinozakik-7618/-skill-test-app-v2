@@ -136,12 +136,8 @@ export default function ReviewTestPage() {
       setShowExplanation(false);
       setIsAnswerSubmitted(false);
     } else {
-      // テスト終了 - 学習履歴を記録
+      // テスト終了 - 結果画面へ遷移
       const categoryForHistory = decodedCategory === 'all' ? '復習テスト（全カテゴリー）' : decodedCategory;
-      const results = getTestResultsByCategory(categoryForHistory);
-      const recentResults = results.slice(-questions.length);
-      const correctCount = recentResults.filter(r => r.isCorrect).length;
-      recordLearningHistory(categoryForHistory, questions.length, correctCount);
       
       const totalTime = Math.floor((new Date().getTime() - testStartTime.getTime()) / 1000);
       navigate('/result', {
