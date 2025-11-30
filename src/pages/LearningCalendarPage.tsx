@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Calendar, TrendingUp, Award } from 'lucide-react';
-import { getLearningHistory, getConsecutiveLearningDays, LearningHistory } from '../utils/storage';
+import { getLearningHistories, getConsecutiveDays, LearningHistory } from '../utils/storage';
 
 export default function LearningCalendarPage() {
   const navigate = useNavigate();
@@ -10,10 +10,10 @@ export default function LearningCalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   useEffect(() => {
-    setHistory(getLearningHistory());
+    setHistory(getLearningHistories());
   }, []);
 
-  const consecutiveDays = getConsecutiveLearningDays();
+  const consecutiveDays = getConsecutiveDays();
 
   // 今月の学習日数と問題数
   const thisMonthHistory = history.filter(h => {
