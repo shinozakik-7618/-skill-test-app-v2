@@ -13,6 +13,7 @@ export interface LearningHistory {
   date: string; // YYYY-MM-DD
   categories: string[];
   questionCount: number;
+  correctCount: number; // 🆕 正解数を追加
   correctRate: number;
 }
 
@@ -192,6 +193,7 @@ export const recordLearningHistory = (category: string, isCorrect: boolean): voi
       date: today,
       categories: [],
       questionCount: 0,
+      correctCount: 0, // 🆕 正解数を初期化
       correctRate: 0,
     };
     histories.push(todayHistory);
@@ -205,10 +207,11 @@ export const recordLearningHistory = (category: string, isCorrect: boolean): voi
   // 問題数をカウント
   todayHistory.questionCount += 1;
   
-  // 正解率を再計算（その日のテスト結果から）
+  // 正解数と正解率を再計算（その日のテスト結果から）
   const todayResults = getTestResultsByDate(new Date(today));
   const correctCount = todayResults.filter(r => r.isCorrect).length;
-  todayHistory.correctRate = (correctCount / todayResults.length) * 100;
+  todayHistory.correctCount = correctCount; // 🆕 正解数を保存
+  todayHistory.correctRate = todayResults.length > 0 ? (correctCount / todayResults.length) * 100 : 0;
   
   localStorage.setItem('learningHistories', JSON.stringify(histories));
 };
