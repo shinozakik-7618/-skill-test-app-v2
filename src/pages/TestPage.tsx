@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, Filter, BookOpen } from 'lucide-react';
 import { getQuestionsByCategory } from '../data/allQuestions';
 import { Question } from '../types';
-import { saveTestResult, getUserId, getTestResultsByCategory, addToReviewNote, removeFromReviewNote, recordLearningHistory } from '../utils/storage';
+import { saveTestResult, getUserId, getTestResultsByCategory } from '../utils/storage';
 
 type FilterMode = 'all' | 'unanswered' | 'incorrect';
 type TestMode = 'learning' | 'exam'; // 🆕 学習モード or 試験モード
@@ -78,13 +78,7 @@ export default function TestPage() {
 
     saveTestResult(result);
     
-    // 🆕 不正解の場合は復習ノートに追加
-    if (!isCorrect) {
-      addToReviewNote(currentQuestion.id, decodedCategory, currentQuestion.question);
-    } else {
-      // 正解した場合は復習ノートから削除
-      removeFromReviewNote(currentQuestion.id);
-    }
+    // 復習ノート・学習履歴の記録はsaveTestResult内で自動的に行われます
     
     setIsAnswerSubmitted(true);
 
