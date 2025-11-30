@@ -9,6 +9,7 @@ import AdminPage from './pages/AdminPage';
 import AnnouncementsPage from './pages/AnnouncementsPage';
 import ModeSelectionPage from './pages/ModeSelectionPage'; // 🆕
 import ReviewNotePage from './pages/ReviewNotePage'; // 🆕
+import ReviewTestPage from './pages/ReviewTestPage'; // 🆕 復習テスト
 import LearningCalendarPage from './pages/LearningCalendarPage'; // 🆕
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/calendar" element={<LearningCalendarPage />} /> {/* 🆕 学習カレンダー */}
           <Route path="/review" element={<ReviewPage />} />
           <Route path="/review-note" element={<ReviewNotePage />} /> {/* 🆕 復習ノート */}
+          <Route path="/review-test/:category" element={<ReviewTestPage />} /> {/* 🆕 復習テスト */}
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/announcements" element={<AnnouncementsPage />} />
