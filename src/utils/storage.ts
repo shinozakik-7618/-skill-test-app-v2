@@ -1,5 +1,21 @@
 import { TestResult, UserStats, TestSession } from '../types';
 
+// 復習ノートの型定義
+export interface ReviewNote {
+  questionId: string;
+  category: string;
+  wrongCount: number;
+  lastAttempt: string;
+}
+
+// 学習履歴の型定義
+export interface LearningHistory {
+  date: string; // YYYY-MM-DD
+  categories: string[];
+  questionCount: number;
+  correctRate: number;
+}
+
 // ユーザーIDの取得/生成
 export const getUserId = (): string => {
   let userId = localStorage.getItem('userId');
@@ -16,6 +32,17 @@ export const saveTestResult = (result: TestResult): void => {
   results.push(result);
   localStorage.setItem('testResults', JSON.stringify(results));
   updateUserStats(result);
+  
+  // 🆕 間違えた問題を復習ノートに追加
+  if (!result.isCorrect) {
+    addToReviewNote(result.questionId, result.category);
+  } else {
+    // 正解した場合は復習ノートから削除
+    removeFromReviewNote(result.questionId);
+  }
+  
+  // 🆕 学習履歴を記録
+  recordLearningHistory(result.category, result.isCorrect);
 };
 
 // すべてのテスト結果の取得
@@ -109,6 +136,123 @@ export const getTestSession = (): TestSession | null => {
 // テストセッションのクリア
 export const clearTestSession = (): void => {
   localStorage.removeItem('currentTestSession');
+};
+
+// 🆕 復習ノート機能
+
+// 復習ノートに追加
+export const addToReviewNote = (questionId: string, category: string): void => {
+  const notes = getReviewNotes();
+  const existingNote = notes.find(note => note.questionId === questionId);
+  
+  if (existingNote) {
+    existingNote.wrongCount += 1;
+    existingNote.lastAttempt = new Date().toISOString();
+  } else {
+    notes.push({
+      questionId,
+      category,
+      wrongCount: 1,
+      lastAttempt: new Date().toISOString(),
+    });
+  }
+  
+  localStorage.setItem('reviewNotes', JSON.stringify(notes));
+};
+
+// 復習ノートから削除
+export const removeFromReviewNote = (questionId: string): void => {
+  const notes = getReviewNotes();
+  const filtered = notes.filter(note => note.questionId !== questionId);
+  localStorage.setItem('reviewNotes', JSON.stringify(filtered));
+};
+
+// 復習ノートを取得
+export const getReviewNotes = (): ReviewNote[] => {
+  const notes = localStorage.getItem('reviewNotes');
+  return notes ? JSON.parse(notes) : [];
+};
+
+// カテゴリ別の復習ノートを取得
+export const getReviewNotesByCategory = (category: string): ReviewNote[] => {
+  return getReviewNotes().filter(note => note.category === category);
+};
+
+// 🆕 学習履歴機能
+
+// 学習履歴を記録
+export const recordLearningHistory = (category: string, isCorrect: boolean): void => {
+  const today = new Date().toISOString().split('T')[0];
+  const histories = getLearningHistories();
+  
+  let todayHistory = histories.find(h => h.date === today);
+  
+  if (!todayHistory) {
+    todayHistory = {
+      date: today,
+      categories: [],
+      questionCount: 0,
+      correctRate: 0,
+    };
+    histories.push(todayHistory);
+  }
+  
+  // カテゴリを追加（重複なし）
+  if (!todayHistory.categories.includes(category)) {
+    todayHistory.categories.push(category);
+  }
+  
+  // 問題数をカウント
+  todayHistory.questionCount += 1;
+  
+  // 正解率を再計算（その日のテスト結果から）
+  const todayResults = getTestResultsByDate(new Date(today));
+  const correctCount = todayResults.filter(r => r.isCorrect).length;
+  todayHistory.correctRate = (correctCount / todayResults.length) * 100;
+  
+  localStorage.setItem('learningHistories', JSON.stringify(histories));
+};
+
+// 学習履歴を取得
+export const getLearningHistories = (): LearningHistory[] => {
+  const histories = localStorage.getItem('learningHistories');
+  return histories ? JSON.parse(histories) : [];
+};
+
+// 特定日の学習履歴を取得
+export const getLearningHistoryByDate = (date: Date): LearningHistory | null => {
+  const targetDate = date.toISOString().split('T')[0];
+  const histories = getLearningHistories();
+  return histories.find(h => h.date === targetDate) || null;
+};
+
+// 連続学習日数を取得
+export const getConsecutiveDays = (): number => {
+  const histories = getLearningHistories();
+  if (histories.length === 0) return 0;
+  
+  // 日付順にソート
+  const sortedHistories = histories.sort((a, b) => 
+    new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+  
+  let consecutiveDays = 0;
+  const today = new Date().toISOString().split('T')[0];
+  let currentDate = new Date(today);
+  
+  for (const history of sortedHistories) {
+    const historyDate = history.date;
+    const expectedDate = currentDate.toISOString().split('T')[0];
+    
+    if (historyDate === expectedDate) {
+      consecutiveDays += 1;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  
+  return consecutiveDays;
 };
 
 // CSVエクスポート用のデータ取得
@@ -234,6 +378,11 @@ export const deleteDataByDate = (date: Date): boolean => {
     // フィルタ後のデータを保存
     localStorage.setItem('testResults', JSON.stringify(filteredResults));
     
+    // 学習履歴も削除
+    const histories = getLearningHistories();
+    const filteredHistories = histories.filter(h => h.date !== targetDate);
+    localStorage.setItem('learningHistories', JSON.stringify(filteredHistories));
+    
     // 統計情報を再計算
     recalculateUserStats();
     
@@ -251,7 +400,7 @@ export const deleteDataByDate = (date: Date): boolean => {
 export const clearAllData = (): boolean => {
   try {
     const confirmation = window.confirm(
-      'すべてのデータを削除してもよろしいですか？\n\n削除対象:\n・全期間のテスト結果\n・カレンダーデータ\n・統計情報\n\nこの操作は取り消せません。'
+      'すべてのデータを削除してもよろしいですか？\n\n削除対象:\n・全期間のテスト結果\n・カレンダーデータ\n・統計情報\n・復習ノート\n\nこの操作は取り消せません。'
     );
     
     if (!confirmation) {
@@ -261,6 +410,8 @@ export const clearAllData = (): boolean => {
     localStorage.removeItem('testResults');
     localStorage.removeItem('userStats');
     localStorage.removeItem('currentTestSession');
+    localStorage.removeItem('reviewNotes');
+    localStorage.removeItem('learningHistories');
     
     alert('すべてのデータを削除しました。');
     window.location.reload();
