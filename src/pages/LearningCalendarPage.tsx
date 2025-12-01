@@ -12,6 +12,7 @@ export default function LearningCalendarPage() {
   useEffect(() => {
     const loadHistory = () => {
       const histories = getLearningHistories();
+      console.log('🔍 [DEBUG] 読み込んだ学習履歴:', histories);
       setHistory(histories);
     };
     loadHistory();
@@ -25,12 +26,16 @@ export default function LearningCalendarPage() {
 
   // 今月の学習日数と問題数
   const thisMonthHistory = history.filter(h => {
-    const date = new Date(h.date);
+    const date = new Date(h.date + 'T00:00:00'); // タイムゾーン対策
+    console.log('🔍 [DEBUG] フィルタリング中:', h.date, '→', date, 'vs', currentMonth);
     return date.getMonth() === currentMonth.getMonth() && 
            date.getFullYear() === currentMonth.getFullYear();
   });
   const thisMonthDays = thisMonthHistory.length;
   const thisMonthQuestions = thisMonthHistory.reduce((sum, h) => sum + h.questionCount, 0);
+
+  console.log('🔍 [DEBUG] 今月の履歴:', thisMonthHistory);
+  console.log('🔍 [DEBUG] 今月の学習日数:', thisMonthDays);
 
   // カレンダー生成
   const generateCalendar = () => {
@@ -59,16 +64,29 @@ export default function LearningCalendarPage() {
   const calendar = generateCalendar();
 
   const getDateHistory = (date: Date): LearningHistory | undefined => {
-    const dateStr = date.toISOString().split('T')[0];
-    return history.find(h => h.date === dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    console.log('🔍 [DEBUG] getDateHistory:', date, '→', dateStr);
+    const found = history.find(h => h.date === dateStr);
+    console.log('🔍 [DEBUG] 見つかった履歴:', found);
+    return found;
   };
 
   const handleDateClick = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    console.log('🔍 [DEBUG] 日付クリック:', date, '→', dateStr);
     setSelectedDate(selectedDate === dateStr ? null : dateStr);
   };
 
   const selectedHistory = selectedDate ? history.find(h => h.date === selectedDate) : null;
+  console.log('🔍 [DEBUG] 選択された履歴:', selectedHistory);
 
   const prevMonth = () => {
     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
@@ -107,7 +125,6 @@ export default function LearningCalendarPage() {
 
       {/* メインコンテンツ */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        {/* モチベーションメッセージは日付クリック時に表示するため削除 */}
         {/* 統計サマリー */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-gradient-to-br from-orange-500 to-red-500 text-white rounded-xl shadow-lg p-6">
@@ -178,6 +195,11 @@ export default function LearningCalendarPage() {
               const dayHistory = getDateHistory(date);
               const hasLearning = !!dayHistory;
               const today = isToday(date);
+              
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, '0');
+              const day = String(date.getDate()).padStart(2, '0');
+              const dateStr = `${year}-${month}-${day}`;
 
               return (
                 <button
@@ -189,7 +211,7 @@ export default function LearningCalendarPage() {
                       : hasLearning
                       ? 'border-green-300 bg-green-50 hover:bg-green-100'
                       : 'border-gray-200 hover:bg-gray-50'
-                  } ${selectedDate === date.toISOString().split('T')[0] ? 'ring-4 ring-blue-300' : ''}`}
+                  } ${selectedDate === dateStr ? 'ring-4 ring-blue-300' : ''}`}
                 >
                   <div className="flex flex-col items-center justify-center h-full">
                     <div className={`text-sm font-semibold ${today ? 'text-blue-600' : hasLearning ? 'text-green-700' : 'text-gray-600'}`}>
@@ -223,10 +245,10 @@ export default function LearningCalendarPage() {
           </div>
         </div>
 
-        {/* 選択日の詳細 + 🆕 モチベーションメッセージをここに移動 */}
+        {/* 選択日の詳細 + モチベーションメッセージ */}
         {selectedHistory && (
           <div className="space-y-6">
-            {/* 🆕 成績に応じたモチベーションメッセージ */}
+            {/* 成績に応じたモチベーションメッセージ */}
             {(() => {
               const rate = selectedHistory.correctRate;
               let message, emoji, colorClass;
@@ -253,6 +275,8 @@ export default function LearningCalendarPage() {
                 colorClass = 'from-purple-400 to-pink-500';
               }
               
+              console.log('🔍 [DEBUG] モチベーションメッセージ:', { rate, message, emoji });
+              
               return (
                 <div className={`bg-gradient-to-r ${colorClass} text-white rounded-xl shadow-lg p-6`}>
                   <div className="flex items-center justify-between">
@@ -275,7 +299,7 @@ export default function LearningCalendarPage() {
             {/* 学習記録詳細 */}
             <div className="bg-white rounded-xl shadow-lg p-6">
               <h3 className="text-xl font-bold text-gray-900 mb-4">
-                {new Date(selectedHistory.date).toLocaleDateString('ja-JP', { 
+                {new Date(selectedHistory.date + 'T00:00:00').toLocaleDateString('ja-JP', { 
                   year: 'numeric', 
                   month: 'long', 
                   day: 'numeric',
@@ -289,7 +313,12 @@ export default function LearningCalendarPage() {
                 </div>
                 <div className="bg-green-50 rounded-lg p-4">
                   <div className="text-sm text-green-700 font-semibold mb-1">正解数</div>
-                  <div className="text-2xl font-bold text-green-900">{selectedHistory.correctCount}問</div>
+                  <div className="text-2xl font-bold text-green-900">
+                    {selectedHistory.correctCount !== undefined ? selectedHistory.correctCount : '???'}問
+                  </div>
+                  {selectedHistory.correctCount === undefined && (
+                    <div className="text-xs text-red-600 mt-1">⚠️ データなし</div>
+                  )}
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
                   <div className="text-sm text-purple-700 font-semibold mb-1">正答率</div>
