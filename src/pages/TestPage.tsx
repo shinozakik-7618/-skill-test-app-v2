@@ -86,8 +86,8 @@ export default function TestPage() {
     if (testMode === 'learning') {
       setShowExplanation(true);
     } else {
-      // 試験モードの場合は解説なしで次へ
-      moveToNextQuestion();
+      // 試験モードの場合も解説を表示
+      setShowExplanation(true);
     }
   };
 

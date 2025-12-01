@@ -157,7 +157,7 @@ export default function ResultPage() {
             📚 間違えた問題を復習
           </button>
           <button
-            onClick={() => navigate('/learning-calendar')}
+            onClick={() => navigate('/calendar')}
             className="bg-blue-600 text-white px-6 py-4 rounded-lg shadow-md hover:shadow-lg font-semibold transition-all"
           >
             📅 学習履歴を確認
