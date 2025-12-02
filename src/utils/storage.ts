@@ -611,6 +611,50 @@ export const getReviewNotesByCategory = (category: string): ReviewNote[] => {
 export const removeFromReviewNote = (questionId: string): void => {
   deleteReviewNote(questionId);
 };
+/**
+ * ユーザーIDを取得（現在は未実装、将来の拡張用）
+ */
+export const getUserId = (): string => {
+  // 現在はローカルストレージベースなのでダミーIDを返す
+  return 'local-user';
+};
+
+/**
+ * 復習ノートに問題を追加
+ */
+export const addToReviewNote = (questionId: string, category: string): void => {
+  const reviewNotes = getReviewNotes();
+  const existingNote = reviewNotes.find(note => note.questionId === questionId);
+
+  if (existingNote) {
+    existingNote.wrongCount += 1;
+    existingNote.lastAttempt = new Date().toISOString();
+  } else {
+    reviewNotes.push({
+      questionId,
+      category,
+      wrongCount: 1,
+      lastAttempt: new Date().toISOString(),
+    });
+  }
+
+  safeSetItem(STORAGE_KEYS.REVIEW_NOTES, reviewNotes);
+};
+
+/**
+ * カテゴリー別のテスト結果を取得
+ */
+export const getTestResultsByCategory = (category: string): TestResult[] => {
+  const allResults = getTestResults();
+  const categoryResults: TestResult[] = [];
+
+  allResults.forEach(test => {
+    const filtered = test.results.filter(result => result.category === category);
+    categoryResults.push(...filtered);
+  });
+
+  return categoryResults;
+};
 export default {
   getQuestions,
   saveQuestions,
@@ -629,6 +673,9 @@ export default {
   exportToCSV,
   getReviewNotesByCategory,
   removeFromReviewNote,
+  getUserId,
+  addToReviewNote,
+  getTestResultsByCategory,
   checkDataIntegrity,
   listBackups,
 };
