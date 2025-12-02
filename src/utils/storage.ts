@@ -597,6 +597,20 @@ export const exportToCSV = (): string => {
 
   return csv;
 };
+/**
+ * カテゴリー別の復習ノートを取得
+ */
+export const getReviewNotesByCategory = (category: string): ReviewNote[] => {
+  const allNotes = getReviewNotes();
+  return allNotes.filter(note => note.category === category);
+};
+
+/**
+ * 復習ノートから問題を削除
+ */
+export const removeFromReviewNote = (questionId: string): void => {
+  deleteReviewNote(questionId);
+};
 export default {
   getQuestions,
   saveQuestions,
@@ -613,6 +627,8 @@ export default {
   clearAllData,
   deleteDataByDate,
   exportToCSV,
+  getReviewNotesByCategory,
+  removeFromReviewNote,
   checkDataIntegrity,
   listBackups,
 };
