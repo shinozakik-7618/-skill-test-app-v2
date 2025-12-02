@@ -520,6 +520,83 @@ export const getIncorrectQuestionIds = (): string[] => {
   const reviewNotes = getReviewNotes();
   return reviewNotes.map(note => note.questionId);
 };
+// ========================================
+// 管理機能（AdminPage.tsx で使用）
+// ========================================
+
+/**
+ * すべてのデータをクリア
+ */
+export const clearAllData = (): void => {
+  const keys = [
+    STORAGE_KEYS.TEST_RESULTS,
+    STORAGE_KEYS.USER_STATS,
+    STORAGE_KEYS.REVIEW_NOTES,
+    STORAGE_KEYS.LEARNING_HISTORY,
+  ];
+
+  keys.forEach(key => {
+    localStorage.removeItem(key);
+    console.log(`🗑️ [STORAGE] データを削除: ${key}`);
+  });
+
+  alert('すべてのデータを削除しました。');
+};
+
+/**
+ * 指定された日付のデータを削除
+ */
+export const deleteDataByDate = (date: Date): void => {
+  const targetDate = date.toISOString().split('T')[0];
+  
+  // テスト結果を削除
+  const testResults = getTestResults();
+  const filteredResults = testResults.filter(result => {
+    const resultDate = new Date(result.date).toISOString().split('T')[0];
+    return resultDate !== targetDate;
+  });
+  safeSetItem(STORAGE_KEYS.TEST_RESULTS, filteredResults);
+
+  // 学習履歴を削除
+  const histories = getLearningHistories();
+  const filteredHistories = histories.filter(h => h.date !== targetDate);
+  safeSetItem(STORAGE_KEYS.LEARNING_HISTORY, filteredHistories);
+
+  console.log(`🗑️ [STORAGE] ${targetDate} のデータを削除しました`);
+  alert(`${targetDate} のデータを削除しました。`);
+};
+
+/**
+ * テスト結果をCSV形式でエクスポート
+ */
+export const exportToCSV = (): string => {
+  const testResults = getTestResults();
+  
+  if (testResults.length === 0) {
+    throw new Error('エクスポートするデータがありません');
+  }
+
+  // CSVヘッダー
+  const headers = ['日付', '問題ID', 'カテゴリー', '選択した回答', '正解', '正誤'];
+  let csv = headers.join(',') + '\n';
+
+  // データ行
+  testResults.forEach(test => {
+    test.results.forEach(result => {
+      const row = [
+        new Date(test.date).toLocaleString('ja-JP'),
+        result.questionId,
+        result.category,
+        result.selectedAnswer,
+        '', // 正解は問題データから取得する必要があるため空白
+        result.isCorrect ? '正解' : '不正解',
+      ];
+      csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+    });
+  });
+
+  return csv;
+};
 export default {
   getQuestions,
   saveQuestions,
@@ -533,6 +610,9 @@ export default {
   getLearningHistoryByDate,
   getConsecutiveDays,
   getIncorrectQuestionIds,
+  clearAllData,
+  deleteDataByDate,
+  exportToCSV,
   checkDataIntegrity,
   listBackups,
 };
