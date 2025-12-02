@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Question, getQuestions, saveTestResult, TestResult } from '../utils/storage';
-
+import { Question, saveTestResult, TestResult } from '../utils/storage';
+import { allQuestions } from '../data/allQuestions';
 // 問題選択肢のインターフェース
 interface Option {
   id: string;
@@ -37,7 +37,7 @@ const TestPage: React.FC = () => {
       setCategory(location.state?.category || 'AI・DX基礎知識');
     } else {
       // 通常モード
-      const allQuestions = getQuestions();
+
       const targetCategory = categoryParam || 'AI・DX基礎知識';
       setCategory(targetCategory);
       
