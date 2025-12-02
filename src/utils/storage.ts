@@ -512,7 +512,14 @@ export const checkDataIntegrity = (): void => {
     }
   });
 };
-
+/**
+ * 間違えた問題のIDリストを取得
+ * ReviewPage.tsx で使用
+ */
+export const getIncorrectQuestionIds = (): string[] => {
+  const reviewNotes = getReviewNotes();
+  return reviewNotes.map(note => note.questionId);
+};
 export default {
   getQuestions,
   saveQuestions,
@@ -525,6 +532,7 @@ export default {
   getLearningHistories,
   getLearningHistoryByDate,
   getConsecutiveDays,
+  getIncorrectQuestionIds,
   checkDataIntegrity,
   listBackups,
 };
