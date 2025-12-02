@@ -96,3 +96,18 @@ export const getCategoryStatistics = () => {
     actualCount: getQuestionsByCategory(cat.id).length // IDを使用して取得
   }));
 };
+// 全問題データをエクスポート
+export const allQuestions: Question[] = [
+  ...financeQuestions,
+  ...legalQuestions,
+  ...governanceQuestions,
+  ...hrQuestions,
+  ...strategyQuestions,
+  ...processQuestions,
+  ...organizationQuestions,
+  ...itQuestions,
+  ...questionsGeneral,
+  ...questionsCommunication,
+  ...aidxQuestions,
+  ...questionsPCDepot,
+];
