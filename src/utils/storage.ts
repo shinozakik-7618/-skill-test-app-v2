@@ -340,6 +340,13 @@ export const getUserStats = (): UserStats => {
 const updateReviewNotes = (results: TestResult[]): void => {
   const reviewNotes = safeGetItem<ReviewNote[]>(STORAGE_KEYS.REVIEW_NOTES, []);
 
+  // 🔧 v3デバッグ: 重複するquestionIdを検出
+  const questionIds = results.map(r => r.questionId);
+  const duplicates = questionIds.filter((id, index) => questionIds.indexOf(id) !== index);
+  if (duplicates.length > 0) {
+    console.warn('⚠️ [重複検出] results配列に同じquestionIdが複数回含まれています:', duplicates);
+  }
+
   results.forEach(result => {
     const existingNote = reviewNotes.find(note => note.questionId === result.questionId);
 
