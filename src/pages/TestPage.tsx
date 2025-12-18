@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Question, TestResult } from '../types';
 import { allQuestions, getQuestionsByCategory } from '../data/allQuestions';
-import { getUserId } from '../utils/storage';
+import { getUserId, saveTestResult } from '../utils/storage';
 
 type FilterMode = 'all' | 'unanswered' | 'incorrect';
 type TestMode = 'learning' | 'exam';
@@ -22,12 +22,23 @@ export default function TestPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [answers, setAnswers] = useState<Map<string, number>>(new Map());
   const [startTime] = useState<Date>(new Date());
   const [questionStartTime, setQuestionStartTime] = useState<Date>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
+
+  // 🆕 バグ3修正: テスト結果を即座に保存するためのRef
+  const testResultsRef = useRef<TestResult[]>([]);
+  
+  // 🆕 バグ3修正: 回答提出時のデータを保持（10問目でも正しく表示）
+  const [submittedAnswer, setSubmittedAnswer] = useState<{
+    selectedIndex: number;
+    selectedText: string;
+    correctIndex: number;
+    correctText: string;
+    isCorrect: boolean;
+  } | null>(null);
 
   useEffect(() => {
     // カテゴリーに応じた問題数を取得
@@ -53,44 +64,75 @@ export default function TestPage() {
     const questionsPerTest = decodedCategory === 'PC Depot' ? 5 : 10;
     const categoryQuestions = getQuestionsByCategory(decodedCategory);
     
-    let filteredQuestions: Question[] = [];
-    
-    switch (mode) {
-      case 'all':
-      default:
-        filteredQuestions = categoryQuestions;
-        break;
-      case 'unanswered':
-      case 'incorrect':
-        filteredQuestions = categoryQuestions;
-        break;
-    }
+    // 🔧 新バグ修正: フィルター機能を実装（現在は全て同じ動作）
+    // 注: 未回答/不正解のフィルター機能は今回は修正しない（別の機能）
+    let filteredQuestions: Question[] = categoryQuestions;
     
     const shuffled = [...filteredQuestions].sort(() => Math.random() - 0.5);
     const selectedQuestions = shuffled.slice(0, questionsPerTest);
     setQuestions(selectedQuestions);
     setQuestionStartTime(new Date());
+    
+    // 🔧 Refをクリア
+    testResultsRef.current = [];
   };
 
   const handleAnswerSelect = (answerIndex: number) => {
-    setSelectedAnswer(answerIndex);
+    if (!isAnswerSubmitted) {
+      setSelectedAnswer(answerIndex);
+    }
   };
 
   const handleSubmitAnswer = () => {
     if (selectedAnswer === null || !currentQuestion) return;
 
-    // 回答を保存
-    const newAnswers = new Map(answers);
-    newAnswers.set(currentQuestion.id, selectedAnswer);
-    setAnswers(newAnswers);
-
-    // 学習モードの場合のみ解説を表示
-    setIsAnswerSubmitted(true);
-    if (testMode === 'learning') {
-      setShowExplanation(true);
-    } else {
-      // 試験モードは自動的に次に進む
-      moveToNextQuestion();
+    try {
+      // 🔧 バグ3修正: currentQuestionの参照を先に保存（10問目の問題を解決）
+      const questionAtSubmit = currentQuestion;
+      const selectedAnswerAtSubmit = selectedAnswer;
+      
+      const endTime = new Date();
+      const timeSpent = Math.floor((endTime.getTime() - questionStartTime.getTime()) / 1000);
+      const isCorrect = selectedAnswerAtSubmit === questionAtSubmit.correctAnswer;
+    
+      // 🔧 バグ3修正: 回答情報を確実に保持（10問目の表示問題を解決）
+      setSubmittedAnswer({
+        selectedIndex: selectedAnswerAtSubmit,
+        selectedText: questionAtSubmit.options[selectedAnswerAtSubmit],
+        correctIndex: questionAtSubmit.correctAnswer,
+        correctText: questionAtSubmit.options[questionAtSubmit.correctAnswer],
+        isCorrect
+      });
+    
+      // 結果をrefに即座に保存
+      const result: TestResult = {
+        id: `result_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: getUserId(),
+        category: questionAtSubmit.category,
+        questionId: questionAtSubmit.id,
+        questionSummary: questionAtSubmit.question.substring(0, 50) + '...',
+        userAnswer: selectedAnswerAtSubmit,
+        correctAnswer: questionAtSubmit.correctAnswer,
+        isCorrect,
+        timeSpent,
+        score: isCorrect ? 10 : 0,
+        testDate: new Date().toISOString()
+      };
+      
+      // 🔧 バグ3修正: 即座にrefに保存（React状態更新を待たない）
+      testResultsRef.current.push(result);
+    
+      // 学習モードの場合のみ解説を表示
+      setIsAnswerSubmitted(true);
+      if (testMode === 'learning') {
+        setShowExplanation(true);
+      } else {
+        // 試験モードは自動的に次に進む
+        moveToNextQuestion();
+      }
+    } catch (error) {
+      console.error('❌ handleSubmitAnswer でエラーが発生しました:', error);
+      alert('エラーが発生しました。コンソールを確認してください。');
     }
   };
 
@@ -101,30 +143,49 @@ export default function TestPage() {
       setSelectedAnswer(null);
       setShowExplanation(false);
       setIsAnswerSubmitted(false);
+      setSubmittedAnswer(null);
       setQuestionStartTime(new Date());
     } else {
       // テスト終了
       setIsSubmitting(true);
-      setTimeout(() => {
-        navigate('/result', { 
-          state: { 
-            category: decodedCategory,
-            questions: questions,
-            answers: Array.from(answers.entries()),
-            totalQuestions: questions.length,
-            totalTime: Math.floor((new Date().getTime() - startTime.getTime()) / 1000),
-            mode: testMode
-          } 
-        });
-      }, 500);
+      
+      try {
+        // 🔧 バグ3修正: refから最新の結果を取得してまとめて保存
+        const finalResults = testResultsRef.current;
+        
+        if (finalResults.length > 0) {
+          // ✅ saveTestResult内でupdateReviewNotes()が自動的に呼ばれる
+          saveTestResult(finalResults);
+          console.log('✅ テスト結果を保存しました:', finalResults.length, '問');
+        }
+        
+        setTimeout(() => {
+          // 🔧 ResultPageに新形式（results）を渡す
+          navigate('/result', { 
+            state: { 
+              category: decodedCategory,
+              questions: questions,
+              results: finalResults,  // ✅ answersではなくresultsを渡す
+              totalQuestions: questions.length,
+              totalTime: Math.floor((new Date().getTime() - startTime.getTime()) / 1000),
+              mode: testMode
+            } 
+          });
+        }, 500);
+      } catch (error) {
+        console.error('❌ テスト終了時にエラーが発生しました:', error);
+        alert('エラーが発生しました。コンソールを確認してください。');
+      }
     }
   };
 
   const handleBack = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-      const previousAnswer = answers.get(questions[currentQuestionIndex - 1].id);
-      setSelectedAnswer(previousAnswer !== undefined ? previousAnswer : null);
+      setSelectedAnswer(null);
+      setShowExplanation(false);
+      setIsAnswerSubmitted(false);
+      setSubmittedAnswer(null);
     }
   };
 
@@ -294,25 +355,33 @@ export default function TestPage() {
         </div>
 
         {/* 解説表示 */}
-        {showExplanation && (
+        {showExplanation && submittedAnswer && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
             <div className={`mb-4 p-4 rounded-lg ${
-              selectedAnswer === currentQuestion.correctAnswer
+              submittedAnswer.isCorrect
                 ? 'bg-green-50 border-2 border-green-300'
                 : 'bg-red-50 border-2 border-red-300'
             }`}>
               <div className="flex items-center mb-2">
                 <span className="text-2xl mr-2">
-                  {selectedAnswer === currentQuestion.correctAnswer ? '✅' : '❌'}
+                  {submittedAnswer.isCorrect ? '✅' : '❌'}
                 </span>
                 <h3 className="text-lg font-bold">
-                  {selectedAnswer === currentQuestion.correctAnswer ? '正解です！' : '不正解です'}
+                  {submittedAnswer.isCorrect ? '正解です！' : '不正解です'}
                 </h3>
               </div>
+              {!submittedAnswer.isCorrect && (
+                <p className="text-sm text-gray-700 mb-2">
+                  <span className="font-semibold text-gray-700">あなたの回答: </span>
+                  <span className="text-red-700 font-bold">
+                    {String.fromCharCode(65 + submittedAnswer.selectedIndex)}. {submittedAnswer.selectedText}
+                  </span>
+                </p>
+              )}
               <p className="text-sm text-gray-700">
                 <span className="font-semibold">正解: </span>
                 <span className="text-green-700 font-bold">
-                  {String.fromCharCode(65 + currentQuestion.correctAnswer)}. {currentQuestion.options[currentQuestion.correctAnswer]}
+                  {String.fromCharCode(65 + submittedAnswer.correctIndex)}. {submittedAnswer.correctText}
                 </span>
               </p>
             </div>
