@@ -62,19 +62,6 @@ const ResultPage: React.FC = () => {
       setMode(state.mode || 'learning');
       console.log('✅ [DEBUG] TestPageからデータを受信:', testResults.length);
       
-      // テスト結果を保存（学習履歴も記録される）
-      console.log('💾 テスト結果を保存中:', testResults.length, '問');
-      const savedResult = saveTestResult(testResults);
-      console.log('✅ テスト結果を保存完了:', savedResult.id);
-      
-      // 間違えた問題を復習ノートに追加
-      const incorrectQuestions = testResults.filter(r => !r.isCorrect);
-      console.log('📝 復習ノートに追加中:', incorrectQuestions.length, '問');
-      incorrectQuestions.forEach(result => {
-        addToReviewNote(result.questionId, result.category);
-        console.log('✅ 復習ノートに追加:', result.questionId, result.category);
-      });
-      
       return;
     }
 
