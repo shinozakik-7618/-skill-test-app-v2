@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getTestResultById, TestResult, Question, addToReviewNote, saveTestResult } from '../utils/storage';
+import { getTestResultById, TestResult, Question, saveTestResult } from '../utils/storage';
 
 interface ResultPageState {
   resultId?: string;
   category?: string;
   questions?: Question[];
   answers?: [string, number][];
+  results?: TestResult[];
   totalQuestions?: number;
   totalTime?: number;
   mode?: string;
@@ -30,7 +31,24 @@ const ResultPage: React.FC = () => {
   const [mode, setMode] = useState<string>('');
 
   useEffect(() => {
-    // TestPageから直接データが渡された場合
+    // 🔧 新形式: TestPageから直接resultsが渡された場合（ReviewTestPageから）
+    if (state?.results && state?.questions) {
+      const correctCount = state.results.filter(r => r.isCorrect).length;
+      setResult({
+        id: `test_${Date.now()}`,
+        date: new Date().toISOString(),
+        results: state.results,
+        score: correctCount,
+        total: state.questions.length
+      });
+      setQuestions(state.questions);
+      setMode(state.mode || 'learning');
+      console.log('✅ [ResultPage] ReviewTestPageから結果を受信:', state.results.length, '問');
+      // ✅ ReviewTestPageで既にsaveTestResult()が呼ばれているため、ここでは保存しない
+      return;
+    }
+
+    // 🔧 旧形式: TestPageからanswersが渡された場合（通常のTestPageから）
     if (state?.questions && state?.answers) {
       const answersMap = new Map(state.answers);
       const testResults: TestResult[] = state.questions.map(q => {
@@ -60,13 +78,21 @@ const ResultPage: React.FC = () => {
       });
       setQuestions(state.questions);
       setMode(state.mode || 'learning');
-      console.log('✅ [DEBUG] TestPageからデータを受信:', testResults.length);
+      console.log('✅ [ResultPage] TestPageからデータを受信:', testResults.length, '問');
+      
+      // ✅ ここで保存処理を実行（TestPageでは保存していないため）
+      console.log('💾 テスト結果を保存中:', testResults.length, '問');
+      const savedResult = saveTestResult(testResults);
+      console.log('✅ テスト結果を保存完了:', savedResult.id);
+      // ✅ saveTestResult内でupdateReviewNotes()が自動的に呼ばれる
+      // addToReviewNote()は呼ばない（二重保存を防ぐ）
       
       return;
     }
 
-    // 旧形式：resultIdから読み込み
+    // resultIdから読み込み
     if (!state?.resultId) {
+      console.error('❌ [ResultPage] 結果データが見つかりませんでした');
       alert('結果が見つかりませんでした');
       navigate('/');
       return;
@@ -75,7 +101,7 @@ const ResultPage: React.FC = () => {
     const loadedResult = getTestResultById(state.resultId);
     if (loadedResult) {
       setResult(loadedResult);
-      console.log('🔍 [DEBUG] 結果を読み込み:', loadedResult);
+      console.log('🔍 [ResultPage] 保存済み結果を読み込み:', loadedResult.id);
     }
 
     if (state.questions) {
