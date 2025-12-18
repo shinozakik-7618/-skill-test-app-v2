@@ -1,11 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { Question, TestResult } from '../types';
+import { Question, TestResult, SavedTestResult } from '../types';
 import { allQuestions, getQuestionsByCategory } from '../data/allQuestions';
 import { getUserId, saveTestResult } from '../utils/storage';
 
 type FilterMode = 'all' | 'unanswered' | 'incorrect';
 type TestMode = 'learning' | 'exam';
+
+// ヘルパー関数: 問題の回答履歴を取得
+const getQuestionHistory = (questionId: string): { answered: boolean; correct: boolean } => {
+  try {
+    const testResults = localStorage.getItem('testResults');
+    if (!testResults) return { answered: false, correct: false };
+    
+    const results: SavedTestResult[] = JSON.parse(testResults);
+    
+    // この問題に対する回答を検索
+    for (const test of results) {
+      const questionResult = test.results.find(r => r.questionId === questionId);
+      if (questionResult) {
+        return {
+          answered: true,
+          correct: questionResult.isCorrect
+        };
+      }
+    }
+    
+    return { answered: false, correct: false };
+  } catch (error) {
+    console.error('Error getting question history:', error);
+    return { answered: false, correct: false };
+  }
+};
 
 export default function TestPage() {
   const { category } = useParams<{ category: string }>();
@@ -28,10 +54,10 @@ export default function TestPage() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [isAnswerSubmitted, setIsAnswerSubmitted] = useState(false);
 
-  // 🆕 バグ3修正: テスト結果を即座に保存するためのRef
+  // テスト結果を即座に保存するためのRef
   const testResultsRef = useRef<TestResult[]>([]);
   
-  // 🆕 バグ3修正: 回答提出時のデータを保持（10問目でも正しく表示）
+  // 回答提出時のデータを保持（10問目でも正しく表示）
   const [submittedAnswer, setSubmittedAnswer] = useState<{
     selectedIndex: number;
     selectedText: string;
@@ -64,16 +90,43 @@ export default function TestPage() {
     const questionsPerTest = decodedCategory === 'PC Depot' ? 5 : 10;
     const categoryQuestions = getQuestionsByCategory(decodedCategory);
     
-    // 🔧 新バグ修正: フィルター機能を実装（現在は全て同じ動作）
-    // 注: 未回答/不正解のフィルター機能は今回は修正しない（別の機能）
-    let filteredQuestions: Question[] = categoryQuestions;
+    // ✅ フィルター機能の実装
+    let filteredQuestions: Question[] = [];
+    
+    switch (filter) {
+      case 'all':
+        filteredQuestions = categoryQuestions;
+        break;
+        
+      case 'unanswered':
+        // 未回答の問題のみ
+        filteredQuestions = categoryQuestions.filter(q => {
+          const history = getQuestionHistory(q.id);
+          return !history.answered;
+        });
+        break;
+        
+      case 'incorrect':
+        // 不正解の問題のみ
+        filteredQuestions = categoryQuestions.filter(q => {
+          const history = getQuestionHistory(q.id);
+          return history.answered && !history.correct;
+        });
+        break;
+    }
+    
+    // フィルター後の問題が少ない場合の対応
+    if (filteredQuestions.length === 0) {
+      alert(`${filter === 'unanswered' ? '未回答' : '不正解'}の問題が見つかりませんでした。全ての問題から出題します。`);
+      filteredQuestions = categoryQuestions;
+    }
     
     const shuffled = [...filteredQuestions].sort(() => Math.random() - 0.5);
-    const selectedQuestions = shuffled.slice(0, questionsPerTest);
+    const selectedQuestions = shuffled.slice(0, Math.min(questionsPerTest, filteredQuestions.length));
     setQuestions(selectedQuestions);
     setQuestionStartTime(new Date());
     
-    // 🔧 Refをクリア
+    // Refをクリア
     testResultsRef.current = [];
   };
 
@@ -87,7 +140,7 @@ export default function TestPage() {
     if (selectedAnswer === null || !currentQuestion) return;
 
     try {
-      // 🔧 バグ3修正: currentQuestionの参照を先に保存（10問目の問題を解決）
+      // currentQuestionの参照を先に保存
       const questionAtSubmit = currentQuestion;
       const selectedAnswerAtSubmit = selectedAnswer;
       
@@ -95,7 +148,7 @@ export default function TestPage() {
       const timeSpent = Math.floor((endTime.getTime() - questionStartTime.getTime()) / 1000);
       const isCorrect = selectedAnswerAtSubmit === questionAtSubmit.correctAnswer;
     
-      // 🔧 バグ3修正: 回答情報を確実に保持（10問目の表示問題を解決）
+      // 回答情報を確実に保持
       setSubmittedAnswer({
         selectedIndex: selectedAnswerAtSubmit,
         selectedText: questionAtSubmit.options[selectedAnswerAtSubmit],
@@ -119,7 +172,6 @@ export default function TestPage() {
         testDate: new Date().toISOString()
       };
       
-      // 🔧 バグ3修正: 即座にrefに保存（React状態更新を待たない）
       testResultsRef.current.push(result);
     
       // 学習モードの場合のみ解説を表示
@@ -150,22 +202,21 @@ export default function TestPage() {
       setIsSubmitting(true);
       
       try {
-        // 🔧 バグ3修正: refから最新の結果を取得してまとめて保存
+        // refから最新の結果を取得してまとめて保存
         const finalResults = testResultsRef.current;
         
         if (finalResults.length > 0) {
-          // ✅ saveTestResult内でupdateReviewNotes()が自動的に呼ばれる
           saveTestResult(finalResults);
           console.log('✅ テスト結果を保存しました:', finalResults.length, '問');
         }
         
         setTimeout(() => {
-          // 🔧 ResultPageに新形式（results）を渡す
+          // ResultPageに新形式（results）を渡す
           navigate('/result', { 
             state: { 
               category: decodedCategory,
               questions: questions,
-              results: finalResults,  // ✅ answersではなくresultsを渡す
+              results: finalResults,
               totalQuestions: questions.length,
               totalTime: Math.floor((new Date().getTime() - startTime.getTime()) / 1000),
               mode: testMode

@@ -167,7 +167,6 @@ export default function ReviewTestPage() {
       // 🔧 FINAL FIX: 即座にrefに保存（React状態更新を待たない）
       testResultsRef.current.push(result);
       setTestResults(prev => [...prev, result]);
-      console.log('💾 [DEBUG] Result saved to ref:', testResultsRef.current.length);
     
       // 🔧 バグ修正: 復習ノートの更新はテスト終了時に一括で行う（ここでは行わない）
       // これにより間違い回数が2倍になる問題を解決
@@ -183,9 +182,7 @@ export default function ReviewTestPage() {
   };
 
   const moveToNextQuestion = () => {
-    console.log('🔍 [DEBUG] moveToNextQuestion called:', { currentQuestionIndex, questionsLength: questions.length });
     if (currentQuestionIndex < questions.length - 1) {
-      console.log('✅ [DEBUG] Moving to next question');
       // 次の問題へ
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setSelectedAnswer(null);
@@ -194,7 +191,6 @@ export default function ReviewTestPage() {
       setShowExplanation(false);
       setIsAnswerSubmitted(false);
     } else {
-      console.log('📊 [DEBUG] Test ending - saving results');
       // テスト終了 - ここで全結果をまとめて保存
       const categoryForHistory = decodedCategory === 'all' ? '復習テスト（全カテゴリー）' : decodedCategory;
       
@@ -202,7 +198,6 @@ export default function ReviewTestPage() {
         // 🔧 FINAL FIX: refから直接取得（React非同期更新の問題を完全解決）
         const finalResults = testResultsRef.current;
         
-        console.log('💾 [DEBUG] Saving results from ref:', finalResults.length);
         if (finalResults.length > 0) {
           // saveTestResult内でupdateReviewNotes()が自動的に呼ばれる
           saveTestResult(finalResults);
@@ -210,7 +205,6 @@ export default function ReviewTestPage() {
           testResultsRef.current = [];
           setTestResults([]);
         } else {
-          console.warn('⚠️ [DEBUG] No results to save!');
         }
       } catch (error) {
         console.error('❌ テスト結果の保存に失敗:', error);
